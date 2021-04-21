@@ -1,22 +1,16 @@
 # -*- coding: utf-8 -*-
-import logging
-import multiprocessing as mp
-import socket
-from typing import Optional
 
+import multiprocessing as mp
+from typing import Optional
 from dataclasses import dataclass
+from uclient import UClient 
+import time
 
 CTX = mp.get_context('spawn')
-LOG_LEVEL = logging.DEBUG
 
 VIDEO_PORT: int = 40921
 AUDIO_PORT: int = 40922
 CTRL_PORT: int = 40923
-PUSH_PORT: int = 40924
-EVENT_PORT: int = 40925
-IP_PORT: int = 40926
-
-DEFAULT_BUF_SIZE: int = 512
 
 # switch_enum
 SWITCH_ON: str = 'on'
@@ -117,72 +111,43 @@ class ArmorHitEvent:
 class SoundApplauseEvent:
     count: int
 
-
-def get_broadcast_ip(timeout: float = None) -> str:
-    BROADCAST_INITIAL: str = 'robot ip '
-
-    conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    conn.bind(('', IP_PORT))
-    conn.settimeout(timeout)
-    msg, ip, port = None, None, None
-    try:
-        msg, (ip, port) = conn.recvfrom(DEFAULT_BUF_SIZE)
-    finally:
-        conn.close()
-    msg = msg.decode()
-    assert len(msg) > len(BROADCAST_INITIAL), f'broken msg from {ip}:{port}: {msg}'
-    msg = msg[len(BROADCAST_INITIAL):]
-    assert msg == ip, f'unmatched source({ip}) and reported IP({msg})'
-    return msg
-
-
-class Commander:
+class Commander(UClient):
     def __init__(self):
+        super().__init__()
+        self.thread_use(False)
+        self.set_udp(False)
         self._mu: mp.Lock = CTX.Lock()
 
-    def open(self, ip: str = '', timeout: float = 30):
-        with self._mu:
-            if ip == '':
-                ip = get_broadcast_ip(timeout)
-            self._ip: str = ip
-            self._closed: bool = False
-            self._conn: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self._timeout: float = timeout
-            self._conn.settimeout(self._timeout)
-            self._conn.connect((self._ip, CTRL_PORT))
-            resp = self._do('command')
-            assert self._is_ok(resp) or resp == 'Already in SDK mode', f'entering SDK mode: {resp}'
-
-    def close(self):
-        with self._mu:
-            self._conn.close()
-            self._closed = True
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, val, tb):
-        self.close()
-
+    def connectToRMS(self, ip):
+        if self.is_opened():
+            return True
+        if ip == "":
+            return False
+        self.connect(ip, CTRL_PORT, 10)
+        self.enter_sdk()
+        
     @staticmethod
     def _is_ok(resp: str) -> bool:
         return resp == 'ok'
 
     def _do(self, *args) -> str:
         assert len(args) > 0, 'empty arg not accepted'
-        assert not self._closed, 'connection is already closed'
         cmd = ' '.join(map(str, args)) + ';'
-        self._conn.send(cmd.encode())
-        buf = self._conn.recv(DEFAULT_BUF_SIZE)
+        self.send(cmd)
+        buf, addr = self.recv(5)
         return buf.decode().strip(' ;')
 
     def get_ip(self) -> str:
-        assert not self._closed, 'connection is already closed'
         return self._ip
 
     def do(self, *args) -> str:
         with self._mu:
             return self._do(*args)
+
+    def enter_sdk(self) -> str:
+        resp = self.do('command')
+        assert self._is_ok(resp), f'SDK: {resp}'
+        return resp
 
     def version(self) -> str:
         return self.do('version')
@@ -415,4 +380,16 @@ class Commander:
         assert self._is_ok(resp), f'blaster_fire: {resp}'
         return resp
 
+    def enable_armor_event(self, enable):
+        return self.armor_event(ARMOR_HIT, enable)
+    
+    def enable_sound_event(self, enable):
+        return self.sound_event(SOUND_APPLAUSE, enable)
+    
+
 commander = Commander()
+if __name__ == '__main__':
+    commander.connectToRMS("127.0.0.1")
+    print("OK")
+    while True:
+        time.sleep(1)

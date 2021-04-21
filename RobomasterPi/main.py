@@ -2,29 +2,26 @@
 import time
 import threading
 
-from mqttclient import mqttclient
-from commander import commander
-import commander as cmd
-from eventlistener import eventlistener
-from newslistener import newslistener
-
+from client.commander import commander
+from client.eventlistener import eventlistener
+from client.newslistener import newslistener
+from client.ipfinder import IPFinder
 #sudo apt install python3-rpi.gpio
 #sudo apt install python3-paho-mqtt
 #sudo apt install python3-smbus
 def init():
     print("init")
-    commander.open()
-    ip = commander.get_ip()
-    newslistener.set_ip(ip)
-    eventlistener.set_ip(ip)
+    finder = IPFinder()
+    ip = finder.find_ip()
+    commander.connectToRMS(ip)
+    newslistener.connectToRMS(ip)
+    eventlistener.connectToRMS(ip)
 
 def start():
     print("start")
-    newslistener.thread_start()
-    eventlistener.thread_start()
     commander.gimbal_push_on()
-    commander.armor_event(cmd.ARMOR_HIT, True)
-    commander.sound_event(cmd.SOUND_APPLAUSE, True)
+    commander.enable_armor_event(True)
+    commander.enable_sound_event(True)
     
 
 def exit():
