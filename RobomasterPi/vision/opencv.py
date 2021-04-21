@@ -1,10 +1,9 @@
 import numpy as np
 import cv2
 import time
-import system
-import function
-import facerecognizer
+from .facerecognizer import FaceRecognizer
 
+VIDEO_PORT: int = 40921
 
 # sudo apt-get install libjpeg-dev libtiff5-dev libjasper-dev libpng12-dev
 # sudo apt-get install libavcodec-dev libavformat-dev libswscale-dev libv4l-dev
@@ -27,13 +26,17 @@ import facerecognizer
 class OpenCV(object):
 
     def open(self, ch=0, width=640, height=480):
-        self.cap = cv2.VideoCapture(ch)
-        print("video")
-        self.cap.set(3, width)
-        self.cap.set(4, height)
-        self.width = int(self.cap.get(3))
-        self.height = int(self.cap.get(4))
-        self.recognizer = facerecognizer.FaceRecognizer()
+        self.ip = ch
+        #if ch is str:
+        self.ip = f'tcp://{ch}:{VIDEO_PORT}'
+        print(self.ip)
+        self.cap = cv2.VideoCapture(self.ip)
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        
+        self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.result = None
         print("open : " + str(width) + " " + str(height))
         print("open : " + str(self.width) + " " + str(self.height))
@@ -42,13 +45,11 @@ class OpenCV(object):
         if self.cap:
             self.cap.release()
 
-    def grab(self, cnt=5):
+    def grab(self):
         if not self.cap:
             return False, None
         if not self.cap.isOpened():
             return False, None
-        for i in range(0, cnt - 1):
-            self.cap.read()
         return self.cap.read()
 
     def rescale_frame(self, frame, percent=75):
@@ -81,10 +82,13 @@ class OpenCV(object):
 
     def blob(self):
         success, frame = self.grab()
+        if not success:
+            return
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray, (5, 5), 0)
         result, threshold = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        
+        if not result:
+            return
         # Setup SimpleBlobDetector parameters.
         params = cv2.SimpleBlobDetector_Params()
         # Change thresholds
@@ -115,7 +119,8 @@ class OpenCV(object):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray, (5, 5), 0)
         result, threshold = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
+        if not result:
+            return
         if False:
             result, labels = cv2.connectedComponents(threshold)
 
@@ -154,41 +159,43 @@ class OpenCV(object):
         self.show('live', r_frame)
 
     def show(self, name, img):
-        if system.is_raspi() :
-            return
         cv2.imshow(name, img)
     
-    def regist_face(self, name):
+    def delay(self, sec):
+        cv2.waitKey(sec)
+    
+    def regist_face(self, name, count):
         cnt = 0
+        recognizer = FaceRecognizer()
         while True:
             success, frame = self.grab()
             if not success:
                 pass
-            if self.recognizer.face_regsitor(frame, name, cnt) :
+            if recognizer.face_regsitor(frame, name, cnt) :
                 cnt += 1
-            if cnt >= 100:
+            if cnt >= count:
                 break
-            time.sleep(0.1)
+            self.delay(1)
 
     def thread_loop(self):
-        self.regist_face('heesung')
-        self.recognizer.train_from_file()
+        self.regist_face('heesung', 100)
+        recognizer = FaceRecognizer()
+        recognizer.train_from_file()
         while True:
             success, frame = self.grab()
             if not success:
                 continue
-            self.result, x, y = self.recognizer.face_recognize(frame)
+            self.result, x, y = recognizer.face_recognize(frame)
             time.sleep(0.1)
 
-
-    def thread_start(self):
-        function.asyncf(self.thread_loop)
 
 opencv = OpenCV()
 if __name__ == '__main__':
     print("start")
     # vision.open('rtsp://eigger:rtsph264@192.168.100.103:8554/unicast')
+
     opencv.open(0)
+    opencv.thread_loop()
     try:
         while True:
             try :

@@ -3,14 +3,13 @@ import numpy as np
 import os
 from os import listdir
 from os.path import isfile, join
-
+import os.path
 
 class FaceRecognizer(object):
 
     def __init__(self):
         self.face_path = '.faces'
-        self.face_classifier = cv2.CascadeClassifier(
-            'haarcascade_frontalface_default.xml')
+        self.face_classifier = cv2.CascadeClassifier('.haarcascade_frontalface_default.xml')
         self.train_model = []
         self.train_name = []
 
@@ -59,7 +58,7 @@ class FaceRecognizer(object):
 
             cv2.putText(face, str(idx), (50, 50),
                         cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-            # cv2.imshow('Face Cropper', face)
+            cv2.imshow('Face Cropper', face)
             print('save: ' + file_name_path)
             return True
         else:
@@ -119,12 +118,12 @@ class FaceRecognizer(object):
             display_string = 'not detected face'
         cv2.putText(image, display_string, (int(center_x-100), int(center_y - 100)),
                     cv2.FONT_HERSHEY_COMPLEX, 1, (250, 120, 255), 2)
-        # cv2.imshow('Face Cropper', image)
+        cv2.imshow('Face Cropper', image)
         return image, result_x, result_y
 
 if __name__ == '__main__':
     recognizer = FaceRecognizer()
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
     # cap = cv2.VideoCapture('rtsp://eigger:rtsph264@192.168.0.211:8554/unicast')
     count = 0
     name = 'heesung'

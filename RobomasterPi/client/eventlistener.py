@@ -1,4 +1,4 @@
-from uclient import UClient 
+from .uclient import UClient 
 import time
 EVENT_PORT: int = 40925
 

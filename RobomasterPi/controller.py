@@ -4,8 +4,6 @@ import function
 import pixy2.pixy as pixy
 from ctypes import *
 from pixy2.pixy import *
-from servo import servo
-from teaching import teaching
 
 class Controller(object):
 
@@ -16,14 +14,12 @@ class Controller(object):
     def open(self):
         pixy.init()
         pixy.change_prog ("Raspi")
-        servo.open()
         #pixy.set_lamp (1, 0)
 
     def close(self):
         #pixy.set_lamp (0, 0)
-        for i in range(0, servo.MAX_SERVO_COUNT):
-            servo.power(i, 0)
-        servo.close()
+        return
+
 
     def test(self):
         pixy.set_lamp (1, 0)
@@ -66,35 +62,6 @@ class Controller(object):
 
         return True
 
-    def teaching_move_to(self, teaching_idx):
-        id_list = [i for i in range(0, servo.MAX_SERVO_COUNT)]
-        servo.multi_move_to(id_list, teaching.get(teaching_idx))        
-
-    def teaching_move_all(self):
-
-        id_list = [i for i in range(0, servo.MAX_SERVO_COUNT)]
-        for teaching_idx in range(0, teaching.size()):
-            if len(teaching.get(teaching_idx)) == 0:
-                continue
-            servo.multi_move_to(id_list, teaching.get(teaching_idx))
-            servo.wait_moving_done_all()
-
-
-    def do_robot_job(self):
-        servo.delay(10)
-        self.teaching_move_to(0)
-        time.sleep(1)
-        self.power_all(1)
-
-        self.teaching_move_all()
-
-        self.power_all(0)
-
-    def power_all(self, on):
-        for i in range(0, servo.MAX_SERVO_COUNT):
-            servo.power(i, on)
-
-
     def thread_loop(self):
         try:
             while True:
@@ -104,20 +71,12 @@ class Controller(object):
 
                     if not self.serach_object():
                         search = False
-
-                if search:
-                    print("OK")
-                    self.do_robot_job()
                 else:
                     print("NG")
                 time.sleep(1)
                 
         except KeyboardInterrupt:
             print("exit")
-        
-
-        
-
 
     def thread_start(self):
         function.asyncf(self.thread_loop)

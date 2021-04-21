@@ -1,4 +1,4 @@
-from uclient import UClient 
+from .uclient import UClient 
 import time
 PUSH_PORT: int = 40924
 

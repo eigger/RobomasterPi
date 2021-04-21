@@ -3,12 +3,11 @@
 import multiprocessing as mp
 from typing import Optional
 from dataclasses import dataclass
-from uclient import UClient 
+from .uclient import UClient 
 import time
 
 CTX = mp.get_context('spawn')
 
-VIDEO_PORT: int = 40921
 AUDIO_PORT: int = 40922
 CTRL_PORT: int = 40923
 
@@ -134,7 +133,8 @@ class Commander(UClient):
         assert len(args) > 0, 'empty arg not accepted'
         cmd = ' '.join(map(str, args)) + ';'
         self.send(cmd)
-        buf, addr = self.recv(5)
+        buf, addr = self.recv(60)
+        print("Recv: " + str(buf))
         return buf.decode().strip(' ;')
 
     def get_ip(self) -> str:
@@ -162,6 +162,10 @@ class Commander(UClient):
         resp = self.do('robot', 'mode', '?')
         assert resp in MODE_ENUMS, f'unexpected robot mode result: {resp}'
         return resp
+
+    def get_robot_battery(self) -> str:
+        resp = self.do('robot', 'battery', '?')
+        return int(resp)
 
     def chassis_speed(self, x: float = 0, y: float = 0, z: float = 0) -> str:
         assert -3.5 <= x <= 3.5, f'x {x} is out of range'
