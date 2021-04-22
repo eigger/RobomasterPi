@@ -1,19 +1,21 @@
 import time
 import function
 
-import pixy2.pixy as pixy
-from ctypes import *
-from pixy2.pixy import *
+from pixy2.pixy2 import Pixy2
 
 class Controller(object):
 
     def __init__(self):
-        pass
+        self.pixy = Pixy2()
         
 
     def open(self):
-        pixy.init()
-        pixy.change_prog ("Raspi")
+        self.pixy.open()
+        self.pixy.change_prog("Raspi")
+        result, data = self.pixy.get_resolution()
+        if result :
+            self.frame_width = self.pixy.get_frame_width(data)
+            self.frame_height = self.pixy.get_frame_height(data)
         #pixy.set_lamp (1, 0)
 
     def close(self):
@@ -22,43 +24,34 @@ class Controller(object):
 
 
     def test(self):
-        pixy.set_lamp (1, 0)
+        self.pixy.set_lamp (1, 0)
         time.sleep(1)
-        pixy.set_lamp (0, 0)
+        self.pixy.set_lamp (0, 0)
 
     def get_offset(self):
-        blocks = BlockArray(1)
-        count = pixy.ccc_get_blocks(1, blocks)
-        print("Count = " + str(count))
         x_offset = 0
         y_offset = 0
-        if count > 0:
-            for index in range (0, count):
-                x_offset  = (pixy.get_frame_width () / 2) - blocks[index].m_x
-                y_offset = blocks[index].m_y - (pixy.get_frame_height () / 2)
-                print("x_offset = " + str(x_offset))
-                print("y_offset = " + str(y_offset))
-        return count, x_offset, y_offset
+        result, data = self.pixy.get_blocks(1, 1)
+        if result:
+            x_offset  = (self.frame_width / 2) - self.pixy.get_x_center(data)
+            y_offset = self.pixy.get_y_center(data) - (self.frame_height / 2)
+            print("x_offset = " + str(x_offset))
+            print("y_offset = " + str(y_offset))
+        return x_offset, y_offset
 
     def get_width_height(self):
-        blocks = BlockArray(1)
-        count = pixy.ccc_get_blocks(1, blocks)
         width = 0
         height = 0
-        print("Count = " + str(count))
-        if count > 0:
-            for index in range (0, count):
-                width  = blocks[index].m_width
-                height = blocks[index].m_height
-                print("width = " + str(width))
-                print("height = " + str(height))
-        return count, width, height
+        result, data = self.pixy.get_blocks(1, 1)
+        if result:
+            width  = self.pixy.get_width(data)
+            height = self.pixy.get_height(data)
+            print("width = " + str(width))
+            print("height = " + str(height))
+        return width, height
 
     def serach_object(self):
-        count, width, height = self.get_width_height()
-
-        if count == 1:
-            return False
+        width, height = self.get_width_height()
 
         return True
 
