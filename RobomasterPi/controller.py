@@ -2,6 +2,11 @@ import time
 import function
 
 from pixy2.pixy2 import Pixy2
+from client.commander import commander
+import client.commander as cmd
+from client.eventlistener import eventlistener
+from client.newslistener import newslistener
+from client.ipfinder import IPFinder
 
 class Controller(object):
 
@@ -13,10 +18,18 @@ class Controller(object):
         self.pixy.open()
         self.pixy.change_prog("Raspi")
         result, data = self.pixy.get_resolution()
-        if result :
+        if result and len(data) > 0:
             self.frame_width = self.pixy.get_frame_width(data)
             self.frame_height = self.pixy.get_frame_height(data)
-        #pixy.set_lamp (1, 0)
+
+        print(self.frame_width)
+        print(self.frame_height)
+        finder = IPFinder()
+        ip = finder.find_ip()
+        commander.connectToRMS(ip)
+        newslistener.connectToRMS(ip)
+        eventlistener.connectToRMS(ip)
+        
 
     def close(self):
         #pixy.set_lamp (0, 0)
@@ -32,12 +45,19 @@ class Controller(object):
         x_offset = 0
         y_offset = 0
         result, data = self.pixy.get_blocks(1, 1)
-        if result:
-            x_offset  = (self.frame_width / 2) - self.pixy.get_x_center(data)
-            y_offset = self.pixy.get_y_center(data) - (self.frame_height / 2)
-            print("x_offset = " + str(x_offset))
-            print("y_offset = " + str(y_offset))
-        return x_offset, y_offset
+        if result and len(data) > 0:
+            x = self.pixy.get_x_center(data)
+            y = self.pixy.get_y_center(data)
+            if x and y:
+                x_offset  = x - (self.frame_width / 2)
+                y_offset =  (self.frame_height / 2) - y
+                print("x_offset = " + str(x_offset))
+                print("y_offset = " + str(y_offset))
+                #self.pixy.set_lamp(1, 1)
+                return True, x_offset, y_offset
+
+        #self.pixy.set_lamp(0, 0)
+        return False, 0, 0
 
     def get_width_height(self):
         width = 0
@@ -56,17 +76,21 @@ class Controller(object):
         return True
 
     def thread_loop(self):
+        print(commander.get_robot_battery())
+        commander.gimbal_push_on()
+        commander.enable_armor_event(True)
+        commander.enable_sound_event(True)
+        commander.robot_mode(cmd.MODE_FREE)
+        commander.gimbal_recenter()
         try:
             while True:
                 
-                search = True
-                for i in range(0, 1):
-
-                    if not self.serach_object():
-                        search = False
+                result, x, y = self.get_offset()
+                if result :
+                    commander.gimbal_speed(y, x)
                 else:
-                    print("NG")
-                time.sleep(1)
+                    commander.gimbal_speed(0, 0)
+                time.sleep(0.01)
                 
         except KeyboardInterrupt:
             print("exit")

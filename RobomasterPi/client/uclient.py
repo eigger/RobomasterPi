@@ -88,7 +88,7 @@ class UClient(object):
                 return False
         try:
             self._conn.send(msg.encode())
-            print("Send: " + str(msg))
+            # print("Send: " + str(msg))
         except:
             return False
         return True

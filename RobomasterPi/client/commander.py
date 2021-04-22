@@ -134,9 +134,9 @@ class Commander(UClient):
         cmd = ' '.join(map(str, args)) + ';'
         self.send(cmd)
         buf, addr = self.recv(60)
-        print("Recv: " + str(buf))
+        # print("Recv: " + str(buf))
         return buf.decode().strip(' ;')
-
+    
     def get_ip(self) -> str:
         return self._ip
 
@@ -382,6 +382,11 @@ class Commander(UClient):
     def blaster_fire(self) -> str:
         resp = self.do('blaster', 'fire')
         assert self._is_ok(resp), f'blaster_fire: {resp}'
+        return resp
+
+    def blaster_bead(self, cnt:int) -> str:
+        resp = self.do('blaster', 'bead', cnt)
+        assert self._is_ok(resp), f'blaster_bead: {resp}'
         return resp
 
     def enable_armor_event(self, enable):

@@ -40,7 +40,7 @@ class Pixy2(object):
     PIXY_RCS_CENTER_POS                  = ((PIXY_RCS_MAX_POS-PIXY_RCS_MIN_POS)/2)
     def __init__(self):
         self.serial = serial.Serial()
-        self.serial.port = "COM6"
+        self.serial.port = "COM4"
         self.serial.baudrate = 19200
         self.serial.parity = serial.PARITY_NONE
         self.serial.stopbits = serial.STOPBITS_ONE
@@ -74,7 +74,7 @@ class Pixy2(object):
             buffer.append(len(_data) & 0xff)
             for byte in _data:
                 buffer.append(byte)
-            print(buffer)
+            # print(buffer)
             self.serial.write(buffer)
         except Exception as e:
             print("except : write " + str(e))
@@ -106,7 +106,7 @@ class Pixy2(object):
                                         datasum += buffer[i]
                                         data.append(buffer[i])
                                     if checksum == datasum:
-                                        print(buffer)
+                                        # print(buffer)
                                         return True, data
                                     break
                 else:
@@ -129,7 +129,7 @@ class Pixy2(object):
         return self.cmd(Pixy2.PIXY_TYPE_REQUEST_VERSION)
 
     def get_resolution(self):
-        return self.cmd(Pixy2.PIXY_TYPE_REQUEST_RESOLUTION)
+        return self.cmd(Pixy2.PIXY_TYPE_REQUEST_RESOLUTION, [0])
 
     def get_frame_width(self, data_array):
         if len(data_array) < 2:
