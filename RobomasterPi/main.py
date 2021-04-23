@@ -15,7 +15,7 @@ from vision.facerecognizer import FaceRecognizer
 def init():
     print("init")
     finder = IPFinder()
-    ip = finder.find_ip()
+    ip = finder.find_robot_ip()
     commander.connectToRMS(ip)
     newslistener.connectToRMS(ip)
     eventlistener.connectToRMS(ip)

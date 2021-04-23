@@ -25,7 +25,7 @@ class Controller(object):
         print(self.frame_width)
         print(self.frame_height)
         finder = IPFinder()
-        ip = finder.find_ip()
+        ip = finder.find_robot_ip()
         commander.connectToRMS(ip)
         newslistener.connectToRMS(ip)
         eventlistener.connectToRMS(ip)
