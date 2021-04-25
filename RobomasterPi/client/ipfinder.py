@@ -1,5 +1,5 @@
 
-from uclient import UClient 
+from .uclient import UClient 
 
 IP_PORT: int = 40926
 IP_MODULE_PORT: int = 40930

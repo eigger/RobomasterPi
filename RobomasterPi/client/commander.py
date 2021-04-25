@@ -133,8 +133,9 @@ class Commander(UClient):
         assert len(args) > 0, 'empty arg not accepted'
         cmd = ' '.join(map(str, args)) + ';'
         self.send(cmd)
+        print("Send: " + str(cmd))
         buf, addr = self.recv(60)
-        # print("Recv: " + str(buf))
+        print("Recv: " + str(buf))
         return buf.decode().strip(' ;')
     
     def get_ip(self) -> str:
@@ -394,6 +395,27 @@ class Commander(UClient):
     
     def enable_sound_event(self, enable):
         return self.sound_event(SOUND_APPLAUSE, enable)
+
+    def pwm_value(self, port_mask: int, value: float) -> str:
+        assert 0 <= port_mask <= 0xffff, f'port_mask {port_mask} is out of range'
+        assert 0 <= value <= 100, f'value {value} is out of range'
+        resp = self.do('pwm', 'value', 'port', port_mask, 'data', value)
+        assert self._is_ok(resp), f'pwm_value: {resp}'
+        return resp
+
+    def pwm_freq(self, port_mask: int, value: int) -> str:
+        assert 0 <= port_mask <= 0xffff, f'port_mask {port_mask} is out of range'
+        assert 0 <= value <= 50000, f'value {value} is out of range'
+        resp = self.do('pwm', 'freq', 'port', port_mask, 'data', value)
+        assert self._is_ok(resp), f'pwm_freq: {resp}'
+        return resp
+
+    def servo_angle(self, id: int, angle:float) -> str:
+        assert 1 <= id <= 6, f'id {id} is out of range'
+        assert -180 <= angle <= 180, f'angle {angle} is out of range'
+        resp = self.do('servo', 'angle', 'id', id, 'angle', angle)
+        assert self._is_ok(resp), f'servo_angle: {resp}'
+        return resp
     
 
 commander = Commander()

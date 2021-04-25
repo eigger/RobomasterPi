@@ -1,7 +1,6 @@
-from uclient import UClient 
+from .uclient import UClient 
 import time
 import multiprocessing as mp
-from ipfinder import IPFinder
 CTX = mp.get_context('spawn')
 MODULE_PORT: int = 40931
 
@@ -27,7 +26,7 @@ class Interfacer(UClient):
         print("Send: " + str(cmd))
         buf, addr = self.recv(60)
         print("Recv: " + str(buf))
-        return buf.decode().strip('\r\n')
+        return buf.decode().strip('\n').strip('\r')
     
     def get_ip(self) -> str:
         return self._ip
@@ -37,15 +36,21 @@ class Interfacer(UClient):
             return self._do(*args)
 
     def get_version(self) -> str:
-        return (self.do('INFO', 'VERSION', ''))
+        resp = self.do('INFO', 'VERSION', '')
+        return resp.split(':')[3]
+
+    def get_blocks(self, sigmap, max_blocks):
+        resp = self.do('PIXY', 'GET', 'BLOCKS', str(sigmap) + ',' + str(max_blocks))
+        return resp.split(':')[3].split(',')
+
+    def get_resolution(self):
+        resp = self.do('PIXY', 'GET', 'RESOLUTION')
+        return resp.split(':')[3].split(',')
 
 
 interfacer = Interfacer()
 if __name__ == '__main__':
-    finder = IPFinder()
-    ip = finder.find_module_ip()
-    interfacer.connectToModule(ip)
-    interfacer.get_version()
+    print(interfacer.get_version())
     while True:
         time.sleep(1)
         break

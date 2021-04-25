@@ -1,7 +1,7 @@
 import time
 import function
 
-from pixy2.pixy2 import Pixy2
+from client.interfacer import interfacer
 from client.commander import commander
 import client.commander as cmd
 from client.eventlistener import eventlistener
@@ -11,43 +11,41 @@ from client.ipfinder import IPFinder
 class Controller(object):
 
     def __init__(self):
-        self.pixy = Pixy2()
+        self.finder = IPFinder()
         
 
     def open(self):
-        self.pixy.open()
-        self.pixy.change_prog("Raspi")
-        result, data = self.pixy.get_resolution()
-        if result and len(data) > 0:
-            self.frame_width = self.pixy.get_frame_width(data)
-            self.frame_height = self.pixy.get_frame_height(data)
-
-        print(self.frame_width)
-        print(self.frame_height)
-        finder = IPFinder()
-        ip = finder.find_robot_ip()
+        ip = self.finder.find_robot_ip()
         commander.connectToRMS(ip)
         newslistener.connectToRMS(ip)
         eventlistener.connectToRMS(ip)
+
+        # ip = self.finder.find_module_ip()
+        # interfacer.connectToModule(ip)
+        # resolution = interfacer.get_resolution()
+        # if len(resolution) > 0:
+        #     self.frame_width = int(resolution[0])
+        #     self.frame_height = int(resolution[1])
+
+        # print(self.frame_width)
+        # print(self.frame_height)
         
 
     def close(self):
+        commander.close()
+        newslistener.close()
+        eventlistener.close()
+        interfacer.close()
         #pixy.set_lamp (0, 0)
         return
-
-
-    def test(self):
-        self.pixy.set_lamp (1, 0)
-        time.sleep(1)
-        self.pixy.set_lamp (0, 0)
 
     def get_offset(self):
         x_offset = 0
         y_offset = 0
-        result, data = self.pixy.get_blocks(1, 1)
-        if result and len(data) > 0:
-            x = self.pixy.get_x_center(data)
-            y = self.pixy.get_y_center(data)
+        blocks = interfacer.get_blocks(1, 1)
+        if len(blocks) > 2:
+            x = int(blocks[1])
+            y = int(blocks[2])
             if x and y:
                 x_offset  = x - (self.frame_width / 2)
                 y_offset =  (self.frame_height / 2) - y
@@ -59,29 +57,21 @@ class Controller(object):
         #self.pixy.set_lamp(0, 0)
         return False, 0, 0
 
-    def get_width_height(self):
-        width = 0
-        height = 0
-        result, data = self.pixy.get_blocks(1, 1)
-        if result:
-            width  = self.pixy.get_width(data)
-            height = self.pixy.get_height(data)
-            print("width = " + str(width))
-            print("height = " + str(height))
-        return width, height
-
-    def serach_object(self):
-        width, height = self.get_width_height()
-
-        return True
-
     def thread_loop(self):
         print(commander.get_robot_battery())
-        commander.gimbal_push_on()
-        commander.enable_armor_event(True)
-        commander.enable_sound_event(True)
-        commander.robot_mode(cmd.MODE_FREE)
-        commander.gimbal_recenter()
+        # commander.gimbal_push_on()
+        # commander.enable_armor_event(True)
+        # commander.enable_sound_event(True)
+        # commander.robot_mode(cmd.MODE_FREE)
+        # commander.gimbal_recenter()
+        commander.pwm_freq(1, 1000)
+        commander.pwm_value(1, 10)
+        time.sleep(5)
+
+        commander.pwm_value(1, 90)
+        time.sleep(1)
+
+        return
         try:
             while True:
                 
@@ -90,7 +80,7 @@ class Controller(object):
                     commander.gimbal_speed(y, x)
                 else:
                     commander.gimbal_speed(0, 0)
-                time.sleep(0.01)
+                time.sleep(0.1)
                 
         except KeyboardInterrupt:
             print("exit")
