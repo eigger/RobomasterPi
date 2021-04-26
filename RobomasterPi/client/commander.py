@@ -53,6 +53,38 @@ LED_EFFECT_ENUMS = (LED_EFFECT_SOLID, LED_EFFECT_OFF,
                     LED_EFFECT_PULSE, LED_EFFECT_BLINK,
                     LED_EFFECT_SCROLLING)
 
+# line_color_enum
+LINE_COLOR_RED = 'red'
+LINE_COLOR_BLUE = 'blue'
+LINE_COLOR_GREEN = 'green'
+LINE_COLOR_ENUMS = (LINE_COLOR_RED, LINE_COLOR_BLUE, LINE_COLOR_GREEN)
+
+# marker_color_enum
+MARKER_COLOR_RED = 'red'
+MARKER_COLOR_BLUE = 'blue'
+MARKER_COLOR_ENUMS = (MARKER_COLOR_RED, MARKER_COLOR_BLUE)
+
+# ai_push_attr_enum
+AI_PUSH_PERSON = 'person'
+AI_PUSH_GESTURE = 'gesture'
+AI_PUSH_LINE = 'line'
+AI_PUSH_MARKER = 'marker'
+AI_PUSH_ROBOT = 'robot'
+AI_PUSH_ENUMS = (AI_PUSH_PERSON, AI_PUSH_GESTURE, AI_PUSH_LINE, AI_PUSH_MARKER, AI_PUSH_ROBOT)
+
+# ai_pose_id_enum
+AI_POSE_FORWARD: int = 4
+AI_POSE_REVERSE: int = 5
+AI_POSE_SHOOTING: int = 6
+AI_POSE_ENUMS = (AI_POSE_FORWARD, AI_POSE_REVERSE, AI_POSE_SHOOTING)
+
+# ai_marker_id_enum
+AI_MARKER_STOP: int = 1
+AI_MARKER_TURN_LEFT: int = 4
+AI_MARKER_TURN_RIGHT: int = 5
+AI_MARKER_MOVE_FORWARD: int = 6
+AI_MARKER_RED_HEART: int = 8
+AI_MARKER_ENUMS = (AI_MARKER_STOP, AI_MARKER_TURN_LEFT, AI_MARKER_TURN_RIGHT, AI_MARKER_MOVE_FORWARD, AI_MARKER_RED_HEART)
 
 @dataclass
 class ChassisSpeed:
@@ -189,7 +221,7 @@ class Commander(UClient):
         assert self._is_ok(resp), f'chassis_wheel: {resp}'
         return resp
 
-    def chassis_move(self, x: float = 0, y: float = 0, z: float = 0, speed_xy: float = None, speed_z: float = None) -> str:
+    def chassis_move(self, x: float = 0, y: float = 0, z: float = 0, speed_xy: float = None, speed_z: float = None, wait_for_complete: bool = True) -> str:
         assert -5 <= x <= 5, f'x {x} is out of range'
         assert -5 <= y <= 5, f'y {y} is out of range'
         assert -1800 <= z <= 1800, f'z {z} is out of range'
@@ -200,10 +232,17 @@ class Commander(UClient):
             cmd += ['vxy', speed_xy]
         if speed_z is not None:
             cmd += ['vz', speed_z]
+        cmd += ['wait_for_complete', wait_for_complete]
         resp = self.do(*cmd)
         assert self._is_ok(resp), f'chassis_move: {resp}'
         return resp
 
+    def chassis_stop(self) -> str:
+        cmd = ['chassis', 'stop']
+        resp = self.do(*cmd)
+        assert self._is_ok(resp), f'chassis_stop: {resp}'
+        return resp
+        
     def get_chassis_position(self) -> ChassisPosition:
         resp = self.do('chassis', 'position', '?')
         ans = resp.split(' ')
@@ -264,7 +303,7 @@ class Commander(UClient):
         assert self._is_ok(resp), f'gimbal_speed: {resp}'
         return resp
 
-    def gimbal_move(self, pitch: float = 0, yaw: float = 0, pitch_speed: float = None, yaw_speed: float = None) -> str:
+    def gimbal_move(self, pitch: float = 0, yaw: float = 0, pitch_speed: float = None, yaw_speed: float = None, wait_for_complete: bool = True) -> str:
         assert -55 <= pitch <= 55, f'pitch {pitch} is out of range'
         assert -55 <= yaw <= 55, f'yaw {yaw} is out of range'
         assert pitch_speed is None or 0 < pitch_speed <= 540, f'pitch_speed {pitch_speed} is out of range'
@@ -274,11 +313,12 @@ class Commander(UClient):
             cmd += ['vp', pitch_speed]
         if yaw_speed is not None:
             cmd += ['vy', yaw_speed]
+        cmd += ['wait_for_complete', wait_for_complete]
         resp = self.do(*cmd)
         assert self._is_ok(resp), f'gimbal_move: {resp}'
         return resp
 
-    def gimbal_moveto(self, pitch: float = 0, yaw: float = 0, pitch_speed: float = None, yaw_speed: float = None) -> str:
+    def gimbal_moveto(self, pitch: float = 0, yaw: float = 0, pitch_speed: float = None, yaw_speed: float = None, wait_for_complete: bool = True) -> str:
         assert -25 <= pitch <= 30, f'pitch {pitch} is out of range'
         assert -250 <= yaw <= 250, f'yaw {yaw} is out of range'
         assert pitch_speed is None or 0 < pitch_speed <= 540, f'pitch_speed {pitch_speed} is out of range'
@@ -288,8 +328,15 @@ class Commander(UClient):
             cmd += ['vp', pitch_speed]
         if yaw_speed is not None:
             cmd += ['vy', yaw_speed]
+        cmd += ['wait_for_complete', wait_for_complete]
         resp = self.do(*cmd)
         assert self._is_ok(resp), f'gimbal_moveto: {resp}'
+        return resp
+
+    def gimbal_stop(self) -> str:
+        cmd = ['gimbal', 'stop']
+        resp = self.do(*cmd)
+        assert self._is_ok(resp), f'gimbal_stop: {resp}'
         return resp
 
     def gimbal_suspend(self):
