@@ -1,6 +1,10 @@
 import numpy as np
 import cv2
+import imutils
 import time
+import threading
+import multiprocessing as mp
+
 if __name__ == '__main__':
     from facerecognizer import FaceRecognizer
 else:
@@ -31,17 +35,23 @@ VIDEO_PORT: int = 40921
 class OpenCV(object):
 
     def open(self, ch=0, width=640, height=480):
-        print(ch)
-        self.cap = cv2.VideoCapture(ch, cv2.CAP_ANY)
-        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 3)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-        self.cap.set(cv2.CAP_PROP_FPS, 30)
+        self.ip = f'tcp://{ch}:{VIDEO_PORT}'
+        self.cap = cv2.VideoCapture(self.ip. cv2.FFMPEG)
+        # self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 4)
+        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        # self.cap.set(cv2.CAP_PROP_FPS, 30)
         self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.result = None
+        self.recognizer = FaceRecognizer()
+        self.image = None
+        self._mu: mp.Lock = mp.get_context('spawn').Lock()
         print("open : " + str(width) + " " + str(height))
         print("open : " + str(self.width) + " " + str(self.height))
+        thread = threading.Thread(target=self.thread_loop)
+        thread.daemon = True
+        thread.start()
 
     def close(self):
         if self.cap:
@@ -57,8 +67,7 @@ class OpenCV(object):
     def rescale_frame(self, frame, percent=75):
         width = int(frame.shape[1] * percent / 100)
         height = int(frame.shape[0] * percent / 100)
-        dim = (width, height)
-        return cv2.resize(frame, dim, interpolation=cv2.INTER_AREA)
+        return imutils.resize(frame, width=width)
 
     def write_img(self, path):
         try:
@@ -166,40 +175,44 @@ class OpenCV(object):
         r_frame = self.rescale_frame(frame, 50)
         self.show('live', r_frame)
 
+    def get_image(self):
+        with self._mu:
+            return self.image
+
     def show(self, name, img):
         cv2.imshow(name, img)
 
-    def delay(self, sec):
-        cv2.waitKey(sec)
+    def delay(self, millisec):
+        cv2.waitKey(millisec)
 
     def regist_face(self, name, count):
         cnt = 0
-        recognizer = FaceRecognizer()
         while True:
             success, frame = self.grab()
             if not success:
                 pass
             r_frame = self.rescale_frame(frame, 50)
-            result = recognizer.face_regsitor(r_frame, name, cnt)
+            result = self.recognizer.face_regsitor(r_frame, name, cnt)
             if result is not None:
                 self.show("result", result)
                 cnt += 1
             if cnt >= count:
                 break
             cv2.waitKey(1)
+    
+    def train_face(self):
+        self.recognizer.train_from_file()
+
+    def recognize_face(self, frame):
+        return self.recognizer.face_recognize(frame)
 
     def thread_loop(self):
-        self.regist_face('heesung', 100)
-        recognizer = FaceRecognizer()
-        recognizer.train_from_file()
         while True:
             success, frame = self.grab()
-            if not success:
-                continue
-            self.result, x, y = recognizer.face_recognize(frame)
-            self.show("result", self.result)
-            cv2.waitKey(1)
-
+            if success:
+                with self._mu:
+                    self.image = frame
+            
 
 opencv = OpenCV()
 if __name__ == '__main__':

@@ -168,9 +168,9 @@ class Commander(UClient):
         assert len(args) > 0, 'empty arg not accepted'
         cmd = ' '.join(map(str, args)) + ';'
         self.send(cmd)
-        print("Send: " + str(cmd))
+        # print("Send: " + str(cmd))
         buf, addr = self.recv(60)
-        print("Recv: " + str(buf))
+        # print("Recv: " + str(buf))
         return buf.decode().strip(' ;')
     
     def get_ip(self) -> str:
