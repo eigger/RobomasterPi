@@ -1,5 +1,7 @@
-
-from .uclient import UClient 
+if __name__ == '__main__':
+    from uclient import UClient
+else:
+    from .uclient import UClient
 
 IP_PORT: int = 40926
 IP_MODULE_PORT: int = 40930

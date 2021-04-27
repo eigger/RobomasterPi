@@ -3,7 +3,10 @@
 import multiprocessing as mp
 from typing import Optional
 from dataclasses import dataclass
-from .uclient import UClient 
+if __name__ == '__main__':
+    from uclient import UClient
+else:
+    from .uclient import UClient
 import time
 
 CTX = mp.get_context('spawn')

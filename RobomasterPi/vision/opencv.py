@@ -1,7 +1,10 @@
 import numpy as np
 import cv2
 import time
-from .facerecognizer import FaceRecognizer
+if __name__ == '__main__':
+    from facerecognizer import FaceRecognizer
+else:
+    from .facerecognizer import FaceRecognizer
 
 VIDEO_PORT: int = 40921
 
@@ -23,18 +26,17 @@ VIDEO_PORT: int = 40921
 # pip3 install opencv-contrib-python==4.1.0.25
 # sudo pip3 install smbus
 # sudo pip3 install rpi_ws281x
+
+
 class OpenCV(object):
 
     def open(self, ch=0, width=640, height=480):
-        self.ip = ch
-        #if ch is str:
-        self.ip = f'tcp://{ch}:{VIDEO_PORT}'
-        print(self.ip)
-        self.cap = cv2.VideoCapture(self.ip)
-        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        print(ch)
+        self.cap = cv2.VideoCapture(ch, cv2.CAP_ANY)
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 3)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-        
+        self.cap.set(cv2.CAP_PROP_FPS, 30)
         self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.result = None
@@ -53,10 +55,10 @@ class OpenCV(object):
         return self.cap.read()
 
     def rescale_frame(self, frame, percent=75):
-        width = int(frame.shape[1] * percent/ 100)
-        height = int(frame.shape[0] * percent/ 100)
+        width = int(frame.shape[1] * percent / 100)
+        height = int(frame.shape[0] * percent / 100)
         dim = (width, height)
-        return cv2.resize(frame, dim, interpolation =cv2.INTER_AREA)
+        return cv2.resize(frame, dim, interpolation=cv2.INTER_AREA)
 
     def write_img(self, path):
         try:
@@ -64,7 +66,7 @@ class OpenCV(object):
                 return
             cv2.imwrite(path, self.result)
         except Exception as e:
-            print('except: '+ str(e)) 
+            print('except: ' + str(e))
 
     def run(self):
         try:
@@ -73,12 +75,13 @@ class OpenCV(object):
                 return
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             blur = cv2.GaussianBlur(gray, (5, 5), 0)
-            result, threshold = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            result, threshold = cv2.threshold(
+                blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
             if not result:
                 return
             cv2.imwrite('result.jpg', threshold)
         except Exception as e:
-            print('except: '+ str(e))
+            print('except: ' + str(e))
 
     def blob(self):
         success, frame = self.grab()
@@ -86,7 +89,8 @@ class OpenCV(object):
             return
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray, (5, 5), 0)
-        result, threshold = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        result, threshold = cv2.threshold(
+            blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         if not result:
             return
         # Setup SimpleBlobDetector parameters.
@@ -109,7 +113,8 @@ class OpenCV(object):
         # Create a detector with the parameters
         detector = cv2.SimpleBlobDetector_create(params)
         keypoints = detector.detect(threshold)
-        im_with_keypoints = cv2.drawKeypoints(threshold, keypoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        im_with_keypoints = cv2.drawKeypoints(threshold, keypoints, np.array(
+            []), (0, 0, 255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
         self.show("test", im_with_keypoints)
 
     def labeling(self):
@@ -118,7 +123,8 @@ class OpenCV(object):
             return
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray, (5, 5), 0)
-        result, threshold = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        result, threshold = cv2.threshold(
+            blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         if not result:
             return
         if False:
@@ -133,24 +139,26 @@ class OpenCV(object):
             labeled_img = cv2.cvtColor(labeled_img, cv2.COLOR_HSV2BGR)
 
             # set bg label to black
-            labeled_img[label_hue==0] = 0
+            labeled_img[label_hue == 0] = 0
 
             self.show('labeled.png', labeled_img)
         else:
-            result, labels, stats, centroids = cv2.connectedComponentsWithStats(threshold)
+            result, labels, stats, centroids = cv2.connectedComponentsWithStats(
+                threshold)
             for x, y, w, h, cnt in stats:
                 if (h, w) < frame.shape:
-                    cv2.rectangle(frame, (x,y,w,h), (0,255,0), 1)
+                    cv2.rectangle(frame, (x, y, w, h), (0, 255, 0), 1)
             self.show('test', frame)
 
             threshold_not = cv2.bitwise_not(threshold)
-            result, labels, stats, centroids = cv2.connectedComponentsWithStats(threshold_not)
+            result, labels, stats, centroids = cv2.connectedComponentsWithStats(
+                threshold_not)
             for x, y, w, h, cnt in stats:
                 if (h, w) < frame.shape:
-                    cv2.rectangle(frame, (x,y,w,h), (255,0,0), 1)
+                    cv2.rectangle(frame, (x, y, w, h), (255, 0, 0), 1)
             self.show('test', frame)
             self.show('binary', threshold)
-            
+
     def live(self):
         success, frame = self.grab()
         if not success:
@@ -160,10 +168,10 @@ class OpenCV(object):
 
     def show(self, name, img):
         cv2.imshow(name, img)
-    
+
     def delay(self, sec):
         cv2.waitKey(sec)
-    
+
     def regist_face(self, name, count):
         cnt = 0
         recognizer = FaceRecognizer()
@@ -171,11 +179,14 @@ class OpenCV(object):
             success, frame = self.grab()
             if not success:
                 pass
-            if recognizer.face_regsitor(frame, name, cnt) :
+            r_frame = self.rescale_frame(frame, 50)
+            result = recognizer.face_regsitor(r_frame, name, cnt)
+            if result is not None:
+                self.show("result", result)
                 cnt += 1
             if cnt >= count:
                 break
-            self.delay(1)
+            cv2.waitKey(1)
 
     def thread_loop(self):
         self.regist_face('heesung', 100)
@@ -186,29 +197,29 @@ class OpenCV(object):
             if not success:
                 continue
             self.result, x, y = recognizer.face_recognize(frame)
-            time.sleep(0.1)
+            self.show("result", self.result)
+            cv2.waitKey(1)
 
 
 opencv = OpenCV()
 if __name__ == '__main__':
     print("start")
-    # vision.open('rtsp://eigger:rtsph264@192.168.100.103:8554/unicast')
-
-    opencv.open(0)
-    opencv.thread_loop()
+    opencv.open('rtsp://eigger:rtsph264@192.168.100.103:8554/unicast')
+    # f'tcp://{ch}:{VIDEO_PORT}'
+    # opencv.open(0)
+    # opencv.thread_loop()
     try:
         while True:
-            try :
+            try:
                 opencv.live()
                 cv2.waitKey(1)
             except KeyboardInterrupt:
                 print("exit")
                 break
             except Exception as e:
-                print('except: '+ str(e))
-            
-                
+                print('except: ' + str(e))
+
         cv2.destroyAllWindows()
         opencv.close()
     except Exception as e:
-        print('except: '+ str(e))
+        print('except: ' + str(e))

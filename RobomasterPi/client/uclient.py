@@ -12,12 +12,13 @@ class UClient(object):
         self._buffer_size = 512
         self._thread_use = True
         self._udp = False
+        self._callback = None
 
     def connect(self, ip: str = None, port: int = None, timeout: float = None):
         if self._opend:
             return True
         try:
-            print("Try connect")
+            # print("Try connect")
             if ip is not None:
                 self._ip = ip
             if port is not None:
@@ -58,6 +59,9 @@ class UClient(object):
     def set_udp(self, use):
         self._udp = use
 
+    def set_callback(self, callback):
+        self._callback = callback
+
     def recv(self, timeout):
         self._conn.settimeout(timeout)
         try:
@@ -80,6 +84,8 @@ class UClient(object):
             if len(buffer) == 0:
                 break
             self.on_recv(buffer)
+            if self._callback is not None:
+                self._callback(buffer)
         self.close()
             
     def send(self, msg):

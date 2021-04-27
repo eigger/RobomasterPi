@@ -12,32 +12,64 @@ class Controller(object):
 
     def __init__(self):
         self.finder = IPFinder()
+        self.opened = False
+        self.module_opened = False
         
-
     def open(self):
         ip = self.finder.find_robot_ip()
         commander.connectToRMS(ip)
         newslistener.connectToRMS(ip)
         eventlistener.connectToRMS(ip)
+        newslistener.set_callback(self.news_push)
+        eventlistener.set_callback(self.event_push)
+        self.opened = True
 
-        # ip = self.finder.find_module_ip()
-        # interfacer.connectToModule(ip)
-        # resolution = interfacer.get_resolution()
-        # if len(resolution) > 0:
-        #     self.frame_width = int(resolution[0])
-        #     self.frame_height = int(resolution[1])
+    def open_module(self):
+        ip = self.finder.find_module_ip()
+        interfacer.connectToModule(ip)
+        resolution = interfacer.get_resolution()
+        if len(resolution) > 0:
+            self.frame_width = int(resolution[0])
+            self.frame_height = int(resolution[1])
 
-        # print(self.frame_width)
-        # print(self.frame_height)
-        
+        print(self.frame_width)
+        print(self.frame_height)
+        self.module_opened = True
 
     def close(self):
         commander.close()
         newslistener.close()
         eventlistener.close()
+        
+    def close_module(self):
         interfacer.close()
-        #pixy.set_lamp (0, 0)
-        return
+
+    def event_push(self, buffer):
+        print(buffer)
+
+    def news_push(self, buffer):
+        print(buffer)
+
+    def thread_loop(self):
+        print(commander.get_robot_battery())
+        commander.gimbal_push_on()
+        commander.enable_armor_event(True)
+        commander.enable_sound_event(True)
+        commander.robot_mode(cmd.MODE_FREE)
+        commander.gimbal_recenter()
+
+        while True:
+            
+            result, x, y = self.get_offset()
+            if result :
+                commander.gimbal_speed(y, x)
+            else:
+                commander.gimbal_speed(0, 0)
+            time.sleep(0.1)
+
+    def thread_start(self):
+        function.asyncf(self.thread_loop)
+
 
     def get_offset(self):
         x_offset = 0
@@ -56,37 +88,6 @@ class Controller(object):
 
         #self.pixy.set_lamp(0, 0)
         return False, 0, 0
-
-    def thread_loop(self):
-        print(commander.get_robot_battery())
-        # commander.gimbal_push_on()
-        # commander.enable_armor_event(True)
-        # commander.enable_sound_event(True)
-        # commander.robot_mode(cmd.MODE_FREE)
-        # commander.gimbal_recenter()
-        commander.pwm_freq(1, 1000)
-        commander.pwm_value(1, 10)
-        time.sleep(5)
-
-        commander.pwm_value(1, 90)
-        time.sleep(1)
-
-        return
-        try:
-            while True:
-                
-                result, x, y = self.get_offset()
-                if result :
-                    commander.gimbal_speed(y, x)
-                else:
-                    commander.gimbal_speed(0, 0)
-                time.sleep(0.1)
-                
-        except KeyboardInterrupt:
-            print("exit")
-
-    def thread_start(self):
-        function.asyncf(self.thread_loop)
 
 controller = Controller()
 if __name__ == '__main__':

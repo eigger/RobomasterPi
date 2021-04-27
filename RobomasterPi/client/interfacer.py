@@ -1,4 +1,7 @@
-from .uclient import UClient 
+if __name__ == '__main__':
+    from uclient import UClient
+else:
+    from .uclient import UClient
 import time
 import multiprocessing as mp
 CTX = mp.get_context('spawn')

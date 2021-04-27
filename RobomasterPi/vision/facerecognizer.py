@@ -7,9 +7,9 @@ import os.path
 
 class FaceRecognizer(object):
 
-    def __init__(self):
+    def __init__(self, file:str = 'haarcascade_frontalface_default.xml'):
         self.face_path = '.faces'
-        self.face_classifier = cv2.CascadeClassifier('.haarcascade_frontalface_default.xml')
+        self.face_classifier = cv2.CascadeClassifier(os.path.dirname(os.path.realpath(__file__)) + '/' + file)
         self.train_model = []
         self.train_name = []
 
@@ -22,8 +22,6 @@ class FaceRecognizer(object):
 
         for(x, y, w, h) in faces:
             cropped_face = img[y:y+h, x:x+w]
-            roi = img[y:y+h, x:x+w]
-            roi = cv2.resize(roi, (200, 200))
 
         return cropped_face, roi
 
@@ -44,8 +42,15 @@ class FaceRecognizer(object):
         return img, roi, center_x, center_y
 
     def face_regsitor(self, img, name, idx):
-        cropped_face, roi = self.face_extractor(img)
-        if cropped_face is not None:
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        faces = self.face_classifier.detectMultiScale(gray, 1.3, 5)
+
+        if faces is ():
+            return None
+
+        for(x, y, w, h) in faces:
+            cropped_face = img[y:y+h, x:x+w]
+
             face = cv2.resize(cropped_face, (200, 200))
             face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
 
@@ -56,13 +61,12 @@ class FaceRecognizer(object):
             file_name_path = path + '/user'+str(idx)+'.jpg'
             cv2.imwrite(file_name_path, face)
 
-            cv2.putText(face, str(idx), (50, 50),
+            cv2.putText(img, str(idx), (50, 50),
                         cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-            cv2.imshow('Face Cropper', face)
+            cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 255), 2)
             print('save: ' + file_name_path)
-            return True
-        else:
-            return False
+            return img
+        return None
 
     def train_from_file(self):
         dir_list = os.listdir(self.face_path)
@@ -118,12 +122,12 @@ class FaceRecognizer(object):
             display_string = 'not detected face'
         cv2.putText(image, display_string, (int(center_x-100), int(center_y - 100)),
                     cv2.FONT_HERSHEY_COMPLEX, 1, (250, 120, 255), 2)
-        cv2.imshow('Face Cropper', image)
+        # cv2.imshow('Face Cropper', image)
         return image, result_x, result_y
 
 if __name__ == '__main__':
     recognizer = FaceRecognizer()
-    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    cap = cv2.VideoCapture(0, cv2.CAP_ANY)
     # cap = cv2.VideoCapture('rtsp://eigger:rtsph264@192.168.0.211:8554/unicast')
     count = 0
     name = 'heesung'
