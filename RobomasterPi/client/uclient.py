@@ -100,7 +100,7 @@ class UClient(object):
         return True
 
     def on_recv(self, buffer):
-        print("Recv: " + str(buffer.decode()))
+        return
 
     def __asyncf__(self, func, *args):
         thread = threading.Thread(target=func, args=(args))

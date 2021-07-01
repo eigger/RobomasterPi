@@ -7,14 +7,21 @@ import client.commander as cmd
 from client.eventlistener import eventlistener
 from client.newslistener import newslistener
 from client.ipfinder import IPFinder
+from client.visionlistener import visionlistener
 from vision.opencv import opencv
+
+import numpy as np
+import cv2
+
 STEP_INIT = 0
 STEP_WAIT = 1
 STEP_PIXY = 2
 STEP_OPENCV = 3
 class Controller(object):
-
+    
     def __init__(self):
+        self.MAX_SERVO_COUNT = 4
+        self.servo_position = [0 for i in range(self.MAX_SERVO_COUNT)]
         self.finder = IPFinder()
         self.opened = False
         self.module_opened = False
@@ -24,6 +31,7 @@ class Controller(object):
         self.step = STEP_INIT
         self.robot_ip = ""
         self.module_ip = ""
+        self._bytes = bytes()
         
     def open(self):
         self.robot_ip = self.finder.find_robot_ip()
@@ -48,6 +56,8 @@ class Controller(object):
 
     def open_vision(self):
         commander.stream(True)
+        visionlistener.connectToRMS(self.robot_ip)
+        visionlistener.set_callback(self.vision_push)
         # time.sleep(1)
         # opencv.open(self.robot_ip)
 
@@ -56,11 +66,13 @@ class Controller(object):
         newslistener.close()
         eventlistener.close()
         
+        
     def close_module(self):
         interfacer.close()
 
     def close_vision(self):
-        opencv.close()
+        # opencv.close()
+        visionlistener.close()
 
     def event_push(self, buffer):
         params = buffer.decode().split(' ')
@@ -70,9 +82,46 @@ class Controller(object):
         params = buffer.decode().split(' ')
         print(params)
 
+    def vision_push(self, buffer):
+        try :
+            width = 1280
+            height = 720
+            if len(buffer) >= 512:
+                self._bytes = self._bytes + buffer
+                print("len : " + str(len(self._bytes)))
+                if len(self._bytes) >= width * height * 3:
+                    in_frame = (
+                        np
+                        .frombuffer(self._bytes, np.uint8)
+                        .reshape([height, width, 3])
+                    )
+
+                    self._bytes = bytes()
+                    cv2.imshow("frame", in_frame)
+
+                    #Display the frame
+                    cv2.waitKey(1) 
+        except Exception as e:
+            self._bytes = bytes()
+            print('except: ' + str(e))
+
+
     def thread_loop(self):
         self.initializeRMS()
-        commander.gimbal_moveto(20)
+        # commander.gimbal_moveto(20)
+        # commander.blaster_fire()
+        # commander.chassis_move(0.1)
+        # commander.chassis_move(-0.1)
+        # commander.chassis_move(0, 0.3)
+        # commander.chassis_move(0, -0.3)
+        # commander.robot_mode(cmd.MODE_CHASSIS_LEAD)
+        # commander.chassis_move(0, 0, 50)
+        # commander.chassis_move(0, 0, -50)
+        # commander.robot_mode(cmd.MODE_GIMBAL_LEAD)
+        # commander.gimbal_moveto(20, 20)
+        # commander.gimbal_moveto(20, -20)
+        # commander.robot_mode(cmd.MODE_FREE)
+
         self.step = STEP_WAIT
         pos = -200
 
@@ -85,23 +134,20 @@ class Controller(object):
                 self.step = STEP_WAIT
             elif self.step == STEP_WAIT:
 
-                self.step = STEP_OPENCV
+                self.step = STEP_WAIT
             elif self.step == STEP_PIXY:
                 self.trace_object_pixy2()
                 self.step = STEP_PIXY
 
             elif self.step == STEP_OPENCV:
-                # commander.gimbal_moveto(20, pos, 500, 500)
-                # time.sleep(0.5)
-                # pos += 10
-                # if pos > 200:
-                #     pos = -200
-                # img = opencv.get_image()
-                # opencv.show("frame", img)
-                opencv.delay(1)
+                commander.gimbal_moveto(20, pos)
+                time.sleep(0.5)
+                pos += 10
+                if pos > 200:
+                    pos = -200
                 self.step = STEP_OPENCV
 
-            # time.sleep(1)
+            time.sleep(1)
 
     def thread_start(self):
         function.asyncf(self.thread_loop)
@@ -122,6 +168,23 @@ class Controller(object):
         if self.battery < 10:
             return True
         return False
+
+    def servo_move_to(self, id, position):
+        self.servo_position[id] = float(position)
+        print("servo " + str(id) + " : " + str(self.servo_position[id]))
+        mask = 1 << id
+        commander.pwm_value(mask, self.servo_position[id])
+
+    def servo_multi_move_to(self, idlist, poslist):
+
+        for i in range(0, len(idlist)):
+            self.servo_move_to(idlist[i], poslist[i])
+
+    def servo_move(self, id, position):
+        self.servo_move_to(id, self.servo_position[id] + float(position))
+
+    def servo_get_position(self, id):
+        return self.servo_position[id]
 
     def trace_object_pixy2(self):
         result, x, y = self.get_offset()
@@ -153,5 +216,6 @@ if __name__ == '__main__':
     controller.open()
     controller.open_vision()
     controller.thread_loop()
+    controller.close_vision()
     controller.close()
     

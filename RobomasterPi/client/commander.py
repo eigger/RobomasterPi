@@ -168,7 +168,7 @@ class Commander(UClient):
         assert len(args) > 0, 'empty arg not accepted'
         cmd = ' '.join(map(str, args)) + ';'
         self.send(cmd)
-        # print("Send: " + str(cmd))
+        print("Send: " + str(cmd))
         buf, addr = self.recv(60)
         # print("Recv: " + str(buf))
         return buf.decode().strip(' ;')
@@ -235,7 +235,10 @@ class Commander(UClient):
             cmd += ['vxy', speed_xy]
         if speed_z is not None:
             cmd += ['vz', speed_z]
-        cmd += ['wait_for_complete', wait_for_complete]
+        if wait_for_complete:
+            cmd += ['wait_for_complete', 'true']
+        else:
+            cmd += ['wait_for_complete', 'false']
         resp = self.do(*cmd)
         assert self._is_ok(resp), f'chassis_move: {resp}'
         return resp
@@ -316,7 +319,10 @@ class Commander(UClient):
             cmd += ['vp', pitch_speed]
         if yaw_speed is not None:
             cmd += ['vy', yaw_speed]
-        cmd += ['wait_for_complete', wait_for_complete]
+        if wait_for_complete:
+            cmd += ['wait_for_complete', 'true']
+        else:
+            cmd += ['wait_for_complete', 'false']
         resp = self.do(*cmd)
         assert self._is_ok(resp), f'gimbal_move: {resp}'
         return resp
@@ -331,7 +337,10 @@ class Commander(UClient):
             cmd += ['vp', pitch_speed]
         if yaw_speed is not None:
             cmd += ['vy', yaw_speed]
-        cmd += ['wait_for_complete', wait_for_complete]
+        if wait_for_complete:
+            cmd += ['wait_for_complete', 'true']
+        else:
+            cmd += ['wait_for_complete', 'false']
         resp = self.do(*cmd)
         assert self._is_ok(resp), f'gimbal_moveto: {resp}'
         return resp

@@ -34,13 +34,13 @@ VIDEO_PORT: int = 40921
 
 class OpenCV(object):
 
-    def open(self, ch=0, width=640, height=480):
-        self.ip = f'tcp://{ch}:{VIDEO_PORT}'
-        self.cap = cv2.VideoCapture(self.ip. cv2.FFMPEG)
-        # self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 4)
-        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-        # self.cap.set(cv2.CAP_PROP_FPS, 30)
+    def open(self, ip=0, width=640, height=480):
+        self.address = f'tcp://{ip}:{VIDEO_PORT}'
+        self.cap = cv2.VideoCapture(self.address)
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 4)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        self.cap.set(cv2.CAP_PROP_FPS, 60)
         self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.result = None
@@ -49,6 +49,8 @@ class OpenCV(object):
         self._mu: mp.Lock = mp.get_context('spawn').Lock()
         print("open : " + str(width) + " " + str(height))
         print("open : " + str(self.width) + " " + str(self.height))
+        print("fps : " + str(self.cap.get(cv2.CAP_PROP_FPS)))
+        print("buffer : " + str(self.cap.get(cv2.CAP_PROP_BUFFERSIZE)))
         thread = threading.Thread(target=self.thread_loop)
         thread.daemon = True
         thread.start()
@@ -212,6 +214,8 @@ class OpenCV(object):
             if success:
                 with self._mu:
                     self.image = frame
+                    self.show("dbg", frame)
+            self.delay(1)
             
 
 opencv = OpenCV()
